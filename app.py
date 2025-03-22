@@ -43,11 +43,18 @@ Given the Quranic verse: "{verse}" (Translation: "{translation}") and commentary
 Return result as JSON.
 """
 
-            payload = {
-                "prompt": prompt,
-                "temperature": 0.4,
-                "max_tokens": 500
-            }
+           payload = {
+    "model": "deepseek-chat",  # or whatever model name DeepSeek uses
+    "messages": [
+        {
+            "role": "user",
+            "content": prompt
+        }
+    ],
+    "temperature": 0.4,
+    "max_tokens": 800
+}
+
 
             try:
                 response = requests.post(api_url, json=payload, headers=headers, timeout=30)
