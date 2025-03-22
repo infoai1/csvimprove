@@ -82,20 +82,23 @@ Return result as valid JSON in this format:
             "max_tokens": 800
         }
 
+
+
         try:
-            response = requests.post(api_url, headers=headers, json=payload, timeout=30)
-            reply = response.json()
-
-            # Show the raw response content
-            content = reply["choices"][0]["message"]["content"]
+            content = response.json()["choices"][0]["message"]["content"]
             st.code(content, language="json")
-
-            result_data = json.loads(content.strip())
+        
+            # Clean markdown-style code blocks
+            cleaned = content.strip().replace("```json", "").replace("```", "").strip()
+        
+            result_data = json.loads(cleaned)
+        
             for col in enrich_fields:
                 df.at[idx, col] = result_data.get(col, "")
-
+        
         except Exception as e:
             st.warning(f"⚠️ Row {idx + 1} failed: {e}")
+
 
     st.success("✅ Enrichment completed!")
 
