@@ -8,33 +8,51 @@ st.title("🕌 Quran Commentary Enrichment App")
 
 uploaded_file = st.file_uploader("📂 Upload your Tafsir CSV", type="csv")
 
-if uploaded_file:
+# =======================
+# Step 1: Model Selector
+# =======================
+model_choice = st.selectbox(
+    "🤖 Choose AI Model",
+    ["DeepSeek Reasoner", "Claude 3.5 Sonnet (via OpenRouter)", "Custom"]
+)
+
+# Pre-fill endpoint and model name
+if model_choice == "DeepSeek Reasoner":
+    api_url = "https://api.deepseek.com/v1/chat/completions"
+    model_name = "deepseek-chat"
+elif model_choice == "Claude 3.5 Sonnet (via OpenRouter)":
+    api_url = "https://openrouter.ai/api/v1/chat/completions"
+    model_name = "anthropic/claude-3-sonnet"
+else:
+    api_url = st.text_input("🔗 Custom API Endpoint")
+    model_name = st.text_input("💬 Custom Model Name")
+
+api_key = st.text_input("🔑 API Key", type="password")
+
+# =======================
+# Step 2: Enrichment
+# =======================
+if uploaded_file and st.button("🚀 Enrich Tafsir"):
     df = pd.read_csv(uploaded_file)
     st.success("✅ File loaded successfully!")
     st.dataframe(df.head())
 
-    api_url = st.text_input("🔗 Paste your API Endpoint (Claude, DeepSeek, OpenAI, etc.)")
-    api_key = st.text_input("🔑 API Key (leave blank if not needed)", type="password")
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}"
+    }
 
-    if st.button("🚀 Enrich My Tafsir") and api_url:
-        headers = {
-            "Content-Type": "application/json"
-        }
-        if api_key:
-            headers["Authorization"] = f"Bearer {api_key}"
+    enrich_fields = ["themes", "wisdom_points", "real_life_reflections", "revelation_context"]
+    for col in enrich_fields:
+        if col not in df.columns:
+            df[col] = ""
 
-        # Add empty columns for enrichment if not already present
-        enrich_fields = ["themes", "wisdom_points", "real_life_reflections", "revelation_context"]
-        for col in enrich_fields:
-            if col not in df.columns:
-                df[col] = ""
+    for idx, row in df.iterrows():
+        verse = str(row.get("Verse Text (Arabic)", ""))
+        translation = str(row.get("Latest (English) Translation", ""))
+        commentary = str(row.get("English Commentary", ""))
 
-        for idx, row in df.iterrows():
-            verse = str(row.get("Verse Text (Arabic)", ""))
-            translation = str(row.get("Latest (English) Translation", ""))
-            commentary = str(row.get("English Commentary", ""))
-
-            prompt = f"""
+        prompt = f"""
 Given the Quranic verse: "{verse}" (Translation: "{translation}") and commentary: "{commentary}", extract:
 
 - themes
@@ -51,41 +69,35 @@ Return result as valid JSON in this format:
 }}
 """
 
-            # Prepare payload for DeepSeek/OpenAI-compatible API
-            payload = {
-                "model": "deepseek-chat",  # or your specific model
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                "temperature": 0.4,
-                "max_tokens": 800
-            }
+        # Payload for OpenAI/DeepSeek-compatible APIs
+        payload = {
+            "model": model_name,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            "temperature": 0.4,
+            "max_tokens": 800
+        }
 
+        try:
+            response = requests.post(api_url, headers=headers, json=payload, timeout=30)
+            reply = response.json()
 
+            # Show the raw response content
+            content = reply["choices"][0]["message"]["content"]
+            st.code(content, language="json")
 
-            try:
-                # Get the text content of the AI response
-                content = response.json()["choices"][0]["message"]["content"]
-            
-                # Show raw text from the AI
-                st.text(f"🔍 Row {idx + 1} raw content:")
-                st.code(content)
-            
-                # Safely parse JSON from the string content
-                result_data = json.loads(content.strip())
-            
-                # Fill new columns
-                for col in enrich_fields:
-                    df.at[idx, col] = result_data.get(col, "")
+            result_data = json.loads(content.strip())
+            for col in enrich_fields:
+                df.at[idx, col] = result_data.get(col, "")
 
-            except Exception as e:
-                st.warning(f"⚠️ Row {idx + 1} failed: {e}")
+        except Exception as e:
+            st.warning(f"⚠️ Row {idx + 1} failed: {e}")
 
+    st.success("✅ Enrichment completed!")
 
-        st.success("✅ Enrichment complete!")
-
-        csv_data = df.to_csv(index=False).encode("utf-8")
-        st.download_button("⬇️ Download Enriched CSV", csv_data, file_name="enriched_tafsir.csv", mime="text/csv")
+    csv = df.to_csv(index=False).encode("utf-8")
+    st.download_button("⬇️ Download Enriched CSV", csv, file_name="enriched_tafsir.csv", mime="text/csv")
