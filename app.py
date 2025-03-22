@@ -23,9 +23,11 @@ if uploaded_file:
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
 
-        # Add empty columns for enrichment
-        for col in ["themes", "wisdom_points", "real_life_reflections", "revelation_context"]:
-            df[col] = ""
+        # Add empty columns for enrichment if not already present
+        enrich_fields = ["themes", "wisdom_points", "real_life_reflections", "revelation_context"]
+        for col in enrich_fields:
+            if col not in df.columns:
+                df[col] = ""
 
         for idx, row in df.iterrows():
             verse = str(row.get("Verse Text (Arabic)", ""))
@@ -40,43 +42,45 @@ Given the Quranic verse: "{verse}" (Translation: "{translation}") and commentary
 - real_life_reflections
 - revelation_context
 
-Return result as JSON.
+Return result as valid JSON in this format:
+{{
+  "themes": [...],
+  "wisdom_points": [...],
+  "real_life_reflections": [...],
+  "revelation_context": "..."
+}}
 """
 
-          # Inside your enrichment loop
-payload = {
-    "model": "deepseek-chat",
-    "messages": [
-        {
-            "role": "user",
-            "content": prompt
-        }
-    ],
-    "temperature": 0.4,
-    "max_tokens": 800
-}
+            # Prepare payload for DeepSeek/OpenAI-compatible API
+            payload = {
+                "model": "deepseek-chat",  # or your specific model
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                "temperature": 0.4,
+                "max_tokens": 800
+            }
 
-response = requests.post(api_url, json=payload, headers=headers, timeout=30)
-response_text = response.text
-st.text(f"Row {idx + 1} response:")
-st.code(response_text)
+            try:
+                response = requests.post(api_url, json=payload, headers=headers, timeout=30)
+                response_text = response.text
+                st.text(f"🔍 Row {idx + 1} response:")
+                st.code(response_text)
 
-# Parse content
-try:
-    content = response.json()["choices"][0]["message"]["content"]
-    result_data = json.loads(content)
-except Exception as e:
-    st.warning(f"Could not parse response for row {idx + 1}: {e}")
-    result_data = {}
+                # Try to parse content from response
+                content = response.json()["choices"][0]["message"]["content"]
+                result_data = json.loads(content)
 
-# Fill columns
-for col in ["themes", "wisdom_points", "real_life_reflections", "revelation_context"]:
-    df.at[idx, col] = result_data.get(col, "")
+                for col in enrich_fields:
+                    df.at[idx, col] = result_data.get(col, "")
 
             except Exception as e:
                 st.warning(f"⚠️ Row {idx + 1} failed: {e}")
 
-        st.success("✅ Done enriching! Download below 👇")
+        st.success("✅ Enrichment complete!")
 
         csv_data = df.to_csv(index=False).encode("utf-8")
         st.download_button("⬇️ Download Enriched CSV", csv_data, file_name="enriched_tafsir.csv", mime="text/csv")
