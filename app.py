@@ -15,10 +15,11 @@ model_choice = st.selectbox(
     ["DeepSeek Reasoner", "Claude 3.5 Sonnet (via OpenRouter)", "Custom"]
 )
 
+
 # Auto-fill API details
 if model_choice == "DeepSeek Reasoner":
     api_url = "https://api.deepseek.com/v1/chat/completions"
-    model_name = "deepseek-chat"
+    model_name = "deepseek-reasoner"
 elif model_choice == "Claude 3.5 Sonnet (via OpenRouter)":
     api_url = "https://openrouter.ai/api/v1/chat/completions"
     model_name = "anthropic/claude-3-sonnet"
