@@ -54,7 +54,8 @@ if uploaded_file and st.button("🚀 Enrich Tafsir by Commentary Group"):
 
         verse_text = " | ".join(group_df["Verse Text (Arabic)"].dropna().astype(str).tolist())
         translation = " | ".join(group_df["Latest (English) Translation"].dropna().astype(str).tolist())
-        commentary = group_df["English Commentary"].dropna().astype(str).iloc[0]
+        commentary_series = group_df["English Commentary"].dropna().astype(str)
+        commentary = commentary_series.iloc[0] if not commentary_series.empty else "No commentary provided."
 
         prompt = f"""
 Given the Quranic verses: "{verse_text}" 
