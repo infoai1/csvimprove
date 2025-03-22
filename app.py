@@ -89,9 +89,16 @@ Return result as valid JSON in this format:
             st.code(content, language="json")
         
             # Clean markdown-style code blocks
+            
             cleaned = content.strip().replace("```json", "").replace("```", "").strip()
-        
+
+            if not cleaned:
+                raise ValueError("Empty response from AI.")
+            
             result_data = json.loads(cleaned)
+
+            
+        
         
             for col in enrich_fields:
                 df.at[idx, col] = result_data.get(col, "")
