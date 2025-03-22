@@ -43,8 +43,9 @@ Given the Quranic verse: "{verse}" (Translation: "{translation}") and commentary
 Return result as JSON.
 """
 
-           payload = {
-    "model": "deepseek-chat",  # or whatever model name DeepSeek uses
+          # Inside your enrichment loop
+payload = {
+    "model": "deepseek-chat",
     "messages": [
         {
             "role": "user",
@@ -55,19 +56,22 @@ Return result as JSON.
     "max_tokens": 800
 }
 
+response = requests.post(api_url, json=payload, headers=headers, timeout=30)
+response_text = response.text
+st.text(f"Row {idx + 1} response:")
+st.code(response_text)
 
-            try:
-                response = requests.post(api_url, json=payload, headers=headers, timeout=30)
+# Parse content
+try:
+    content = response.json()["choices"][0]["message"]["content"]
+    result_data = json.loads(content)
+except Exception as e:
+    st.warning(f"Could not parse response for row {idx + 1}: {e}")
+    result_data = {}
 
-                # Show the response (for debug)
-                st.text(f"Row {idx + 1} response:")
-                st.code(response.text)
-
-                # Try parsing the response
-                result_data = json.loads(response.text)
-
-                for col in ["themes", "wisdom_points", "real_life_reflections", "revelation_context"]:
-                    df.at[idx, col] = result_data.get(col, "")
+# Fill columns
+for col in ["themes", "wisdom_points", "real_life_reflections", "revelation_context"]:
+    df.at[idx, col] = result_data.get(col, "")
 
             except Exception as e:
                 st.warning(f"⚠️ Row {idx + 1} failed: {e}")
