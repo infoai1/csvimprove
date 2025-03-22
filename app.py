@@ -64,21 +64,26 @@ Return result as valid JSON in this format:
                 "max_tokens": 800
             }
 
+
+
             try:
-                response = requests.post(api_url, json=payload, headers=headers, timeout=30)
-                response_text = response.text
-                st.text(f"🔍 Row {idx + 1} response:")
-                st.code(response_text)
-
-                # Try to parse content from response
+                # Get the text content of the AI response
                 content = response.json()["choices"][0]["message"]["content"]
-                result_data = json.loads(content)
-
+            
+                # Show raw text from the AI
+                st.text(f"🔍 Row {idx + 1} raw content:")
+                st.code(content)
+            
+                # Safely parse JSON from the string content
+                result_data = json.loads(content.strip())
+            
+                # Fill new columns
                 for col in enrich_fields:
                     df.at[idx, col] = result_data.get(col, "")
 
             except Exception as e:
                 st.warning(f"⚠️ Row {idx + 1} failed: {e}")
+
 
         st.success("✅ Enrichment complete!")
 
