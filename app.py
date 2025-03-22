@@ -144,18 +144,20 @@ Return result as **valid JSON** like this:
 
     st.success("🎉 Enrichment complete for all groups!")
 
+
+
+if uploaded_file and st.button("🚀 Enrich Tafsir"):
+    df = pd.read_csv(uploaded_file)
+    ...
     csv = df.to_csv(index=False).encode("utf-8")
     st.download_button("⬇️ Download Enriched CSV", csv, file_name="enriched_tafsir.csv", mime="text/csv")
 
-# After enrichment step 1
-csv = df.to_csv(index=False).encode("utf-8")
-st.download_button("⬇️ Download Enriched CSV", csv, file_name="enriched_tafsir.csv", mime="text/csv")
 
-st.markdown("---")
-st.header("📘 Optional: Add Outline and Contextual Questions (Step 2)")
-
-
-# Phase 2: Add Outline + Contextual Questions
-from improvement2 import run_improvement2
-run_improvement2(model_name, api_url, api_key, headers)
+    st.markdown("---")
+    st.header("📘 Optional: Add Outline and Contextual Questions (Step 2)")
+    
+    
+    # Phase 2: Add Outline + Contextual Questions
+    from improvement2 import run_improvement2
+    run_improvement2(model_name, api_url, api_key, headers)
 
