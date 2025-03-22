@@ -49,14 +49,40 @@ if uploaded_file and st.button("🚀 Enrich Tafsir by Commentary Group"):
     grouped = df.groupby("Commentary Group")
     group_results = {}
 
+
+    # Loop through the groups and process each group
     for group_name, group_df in grouped:
         st.markdown(f"### 🧠 Processing Group: `{group_name}`")
-
+    
         verse_text = " | ".join(group_df["Verse Text (Arabic)"].dropna().astype(str).tolist())
         translation = " | ".join(group_df["Latest (English) Translation"].dropna().astype(str).tolist())
+        
+        # Handle empty commentary group
         commentary_series = group_df["English Commentary"].dropna().astype(str)
         commentary = commentary_series.iloc[0] if not commentary_series.empty else "No commentary provided."
+    
+        prompt = f"""
+        Given the Quranic verses: "{verse_text}" 
+        (Translation: "{translation}") 
+        and this group commentary: "{commentary}", extract:
+    
+        - themes
+        - wisdom_points
+        - real_life_reflections
+        - revelation_context
+    
+        Return result as **valid JSON** like this:
+        {{
+          "themes": [...],
+          "wisdom_points": [...],
+          "real_life_reflections": [...],
+          "revelation_context": "..."
+        }}
+        """
+        # Process the group with the AI API (as in the previous part)
+        # ...
 
+        
         prompt = f"""
 Given the Quranic verses: "{verse_text}" 
 (Translation: "{translation}") 
