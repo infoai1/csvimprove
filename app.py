@@ -74,20 +74,24 @@ Return your response in valid JSON format with fields:
             }
 
             try:
-                response = requests.post(api_url, json=payload, headers=headers, timeout=30)
-                result = response.json()
+    response = requests.post(api_url, json=payload, headers=headers, timeout=30)
 
-                # Parse either directly as JSON or from string content
-                if isinstance(result, dict):
-                    result_data = result
-                else:
-                    result_data = json.loads(result)
+    # Try to read raw response text first
+    raw_output = response.text
+    st.text_area(f"Raw Output for Row {idx + 1}", raw_output, height=200)
 
-                for field in new_fields:
-                    df.at[idx, field] = result_data.get(field, "")
+    # Try parsing as JSON (handle string-wrapped JSON)
+    try:
+        result_data = response.json()
+    except:
+        result_data = json.loads(raw_output)
 
-            except Exception as e:
-                st.warning(f"⚠️ Error processing row {idx + 1}: {str(e)}")
+    # Check if it has the required fields
+    for field in new_fields:
+        df.at[idx, field] = result_data.get(field, "")
+
+except Exception as e:
+    st.warning(f"⚠️ Error processing row {idx + 1}: {str(e)}")
 
         st.success("✅ Enrichment complete!")
         st.dataframe(df.head())
