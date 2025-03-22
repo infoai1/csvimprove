@@ -37,11 +37,20 @@ if uploaded_file and st.button("🚀 Enrich Tafsir by Commentary Group"):
     st.success("✅ File loaded!")
     st.dataframe(df.head())
 
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {api_key}"
-    }
 
+    api_key = st.text_input("🔑 API Key", type="password")
+
+        # Define headers globally so both Step 1 and Step 2 can use it
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}"
+        }
+    
+
+
+
+
+    
     enrich_fields = ["themes", "wisdom_points", "real_life_reflections", "revelation_context"]
     for field in enrich_fields:
         if field not in df.columns:
