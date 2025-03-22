@@ -116,7 +116,8 @@ Return result as **valid JSON** like this:
         }
 
         try:
-            response = requests.post(api_url, headers=headers, json=payload, timeout=30)
+        with st.spinner(f"Processing group: {group_name}..."):
+            response = requests.post(api_url, headers=headers, json=payload, timeout=90)
             raw_content = response.json()["choices"][0]["message"]["content"]
             st.code(raw_content, language="json")
 
