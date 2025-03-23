@@ -7,7 +7,7 @@ st.set_page_config(page_title="Quran Tafsir Enricher", layout="wide")
 st.title("🕌 Quran Commentary Enrichment App")
 
 # Upload prompt
-st.markdown("This app enriches Quranic commentary by group. Start with Step 1, then optionally continue to Step 2.")
+st.markdown("This app enriches Quranic commentary in two steps: first with core themes and reflections, then with deeper outlines and contextual questions.")
 
 # Model selection
 tabs = ["DeepSeek Reasoner", "Claude 3.5 Sonnet (via OpenRouter)", "Custom"]
@@ -24,7 +24,7 @@ else:
     api_url = st.text_input("🔗 Custom API Endpoint")
     model_name = st.text_input("💬 Custom Model Name")
 
-# API key input
+# API key input (once)
 api_key = st.text_input("🔑 API Key", type="password")
 
 # Shared headers
@@ -33,10 +33,16 @@ headers = {
     "Authorization": f"Bearer {api_key}"
 }
 
-# Step 1: Group-level enrichment
+# -----------------------------
+# STEP 1: Improvement 1 - Core Enrichment
+# -----------------------------
 st.markdown("---")
+st.header("🧩 Improvement 1: Themes, Wisdom & Reflections")
 run_improvement1(model_name, api_url, api_key, headers)
 
-# Step 2: Outline + Contextual Questions
+# -----------------------------
+# STEP 2: Improvement 2 - Outlines & Contextual Questions
+# -----------------------------
 st.markdown("---")
+st.header("📘 Improvement 2: Outline & Contextual Questions")
 run_improvement2(model_name, api_url, api_key, headers)
