@@ -73,7 +73,7 @@ You are given the following exact excerpt from a Quranic commentary (no paraphra
 Please analyze the excerpt and provide the following metadata:
 - ThemeTitle (1-5 words)
 - ThemeSummary (2-3 sentences)
-- craft three deep and open-ended contextual questions that - Are rooted in the actual content and message of the text, Reflect different interpretive lenses (e.g., materialism, secularism, ritualism, atheism etc.), Help a language model or reader become more contextually aware of the text’s core spiritual, philosophical, and moral ideas.
+- craft three deep and open-ended contextual questions that - Are rooted in the actual content and message of the text,  Help a language model or reader become more contextually aware of the text’s core spiritual, philosophical, and moral ideas.
 - Keywords (5-7 keywords as a list)
 - Outline (3-5 bullet points)
 
