@@ -34,7 +34,8 @@ def run_improvement3(model_name, api_url, api_key, headers):
             if not commentary:
                 continue
 
-            prompt = f"""Split the following commentary into thematic sections (150–200 words each). For each section, extract:
+            prompt = f"""
+Split the following commentary into thematic sections (150–200 words each). For each section, extract:
 
 - SectionNumber (e.g., 1, 2, 3)
 - ThemeTitle (short, descriptive)
@@ -54,12 +55,10 @@ Return as JSON list like:
     "ThemeSummary": "...",
     "Keywords": ["..."],
     "Outline": ["..."]
-  }},
-  ...
+  }}
 ]
 
 Commentary:
-"""
 {commentary}
 """
 
