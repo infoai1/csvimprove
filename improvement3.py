@@ -43,7 +43,7 @@ Split the following commentary into thematic sections (150–200 words each). Fo
 - SectionNumber (1, 2, 3,...)
 - ThemeTitle (short, descriptive)
 - ThemeText (150–200 words)
-- ContextualQuestion (2-3 deep, open-ended question)
+- ContextualQuestion (a deep, open-ended question)
 - ThemeSummary (2–3 sentence overview)
 - Keywords (5–7 key terms)
 - Outline (3–5 bullet points)
@@ -93,7 +93,7 @@ Commentary:
                         new_row["Keywords"] = ", ".join(section.get("Keywords", []))
                         new_row["Outline"] = "; ".join(section.get("Outline", []))
 
-                        result_df = result_df.append(new_row, ignore_index=True)
+                        result_df = pd.concat([result_df, pd.DataFrame([new_row])], ignore_index=True)
 
             except Exception as e:
                 st.warning(f"❌ Failed for group {group_name}: {e}")
