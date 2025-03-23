@@ -21,14 +21,19 @@ def chunk_text_with_overlap(text, chunk_size=200, overlap_ratio=0.1):
     return chunks
 
 def run_improvement3(model_name, api_url, api_key, headers):
-    st.header("🧠 Improvement 3: Hybrid Chunking with 10% Overlap")
+    st.header("🧠 Improvement 3: Hybrid Chunking (Deterministic + AI Metadata)")
     st.markdown(
-        "This step splits the commentary using a deterministic, fixed word count approach (with 10% overlap) "
+        "This method splits the commentary using a deterministic, fixed word count approach (with 10% overlap) "
         "and then calls the AI to generate thematic metadata for each chunk, while preserving the exact text."
     )
-    improvement3_file = st.file_uploader("📂 Upload CSV from Improvement 2", type="csv", key="improvement3")
 
-    if improvement3_file and st.button("🚀 Process Commentary for Hybrid Chunking"):
+    improvement3_file = st.file_uploader(
+        "📂 Upload CSV from Improvement 2", 
+        type="csv", 
+        key="improvement3"
+    )
+
+    if improvement3_file and st.button("🚀 Run Hybrid Chunking"):
         df = pd.read_csv(improvement3_file)
         st.success("✅ File loaded!")
         st.dataframe(df.head())
@@ -43,11 +48,16 @@ def run_improvement3(model_name, api_url, api_key, headers):
         result_df = pd.DataFrame(columns=result_cols)
 
         # Process each group separately
+        if "Commentary Group" not in df.columns:
+            st.error("❌ No 'Commentary Group' column found! Please ensure your CSV has a 'Commentary Group' column.")
+            return
+
         grouped = df.groupby("Commentary Group")
         for group_name, group_df in grouped:
             st.markdown(f"### 📘 Processing Group: `{group_name}`")
             commentary_series = group_df["English Commentary"].dropna().astype(str)
             commentary = commentary_series.iloc[0] if not commentary_series.empty else ""
+
             if not commentary:
                 st.warning(f"No commentary found for group: {group_name}")
                 continue
@@ -63,11 +73,12 @@ You are given the following exact excerpt from a Quranic commentary (no paraphra
 Please analyze the excerpt and provide the following metadata:
 - ThemeTitle (1-5 words)
 - ThemeSummary (2-3 sentences)
-- three ContextualQuestion from different perspective (deep and open-ended)
+- Three ContextualQuestion covering context from available different perspectives like materialism , secularism , ritualistic way or any other (deep and open-ended)
 - Keywords (5-7 keywords as a list)
 - Outline (3-5 bullet points)
 
-Return your result as JSON with keys: ThemeTitle, ThemeSummary, ContextualQuestion, Keywords, Outline.
+Return your result as JSON with keys: 
+ThemeTitle, ThemeSummary, ContextualQuestion, Keywords, Outline.
 
 Excerpt:
 \"\"\"
@@ -99,6 +110,7 @@ Excerpt:
                         new_row = {}
                         for col in base_cols:
                             new_row[col] = group_df.iloc[0][col]
+
                         new_row["SectionNumber"] = f"{group_name} - Chunk {idx_chunk}"
                         new_row["ThemeText"] = chunk_text  # exact excerpt from commentary
                         new_row["ThemeTitle"] = meta.get("ThemeTitle", "")
