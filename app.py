@@ -4,10 +4,16 @@ from improvement1 import run_improvement1
 from improvement2 import run_improvement2
 
 st.set_page_config(page_title="Quran Tafsir Enricher", layout="wide")
-st.title("🕌 Quran Commentary Enrichment App")
 
-# Upload prompt
-st.markdown("This app enriches Quranic commentary in two steps: first with core themes and reflections, then with deeper outlines and contextual questions.")
+# Centered layout using container
+with st.container():
+    st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
+    st.title("🕌 Quran Commentary Enrichment App")
+    st.markdown("<p style='font-size: 18px;'>This app enriches Quranic commentary in two steps: first with core themes and reflections, then with deeper outlines and contextual questions.</p>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# Centered controls layout
+st.markdown("<div style='max-width: 800px; margin: auto;'>", unsafe_allow_html=True)
 
 # Model selection
 tabs = ["DeepSeek Reasoner", "Claude 3.5 Sonnet (via OpenRouter)", "Custom"]
@@ -24,7 +30,7 @@ else:
     api_url = st.text_input("🔗 Custom API Endpoint")
     model_name = st.text_input("💬 Custom Model Name")
 
-# API key input (once)
+# API key input
 api_key = st.text_input("🔑 API Key", type="password")
 
 # Shared headers
@@ -37,12 +43,15 @@ headers = {
 # STEP 1: Improvement 1 - Core Enrichment
 # -----------------------------
 st.markdown("---")
-st.header("🧩 Improvement 1: Themes, Wisdom & Reflections")
+st.markdown("<h3 style='text-align: center;'>🧩 Improvement 1: Themes, Wisdom & Reflections</h3>", unsafe_allow_html=True)
 run_improvement1(model_name, api_url, api_key, headers)
 
 # -----------------------------
 # STEP 2: Improvement 2 - Outlines & Contextual Questions
 # -----------------------------
 st.markdown("---")
-st.header("📘 Improvement 2: Outline & Contextual Questions")
+st.markdown("<h3 style='text-align: center;'>📘 Improvement 2: Outline & Contextual Questions</h3>", unsafe_allow_html=True)
 run_improvement2(model_name, api_url, api_key, headers)
+
+# Close centered controls container
+st.markdown("</div>", unsafe_allow_html=True)
