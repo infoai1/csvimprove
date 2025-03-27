@@ -5,8 +5,9 @@ import openai
 def run_improvement4(embedding_model, embedding_api_url, api_key, headers):
     """
     Improvement 4:
-    1) Adds embeddings to CSV using the specified OpenAI Embeddings API.
-    2) Lets the user compare selected rows' ThemeText with GPT-4.
+    1) Adds an 'Embedding' column to the CSV using the specified OpenAI Embeddings API.
+    2) Optionally calls the completions API to generate a summary of the embeddings.
+    3) Lets the user compare selected rows' ThemeText using GPT-4.
     
     Parameters:
       - embedding_model: (str) e.g., "text-embedding-3-small" or "text-embedding-ada-002"
@@ -16,8 +17,9 @@ def run_improvement4(embedding_model, embedding_api_url, api_key, headers):
     """
     st.header("🔎 Improvement 4: Embeddings & Relationship Analysis")
     st.markdown(
-        "This step adds an 'Embedding' column to your CSV using OpenAI Embeddings and optionally compares "
-        "selected rows' ThemeText to analyze their relationship."
+        "This step adds an 'Embedding' column to your CSV using OpenAI Embeddings (you can choose a small or large model) and "
+        "optionally generates an embedding summary using the completions API. It also lets you compare selected rows' ThemeText "
+        "to analyze their relationship."
     )
 
     # Set OpenAI API key and base for embeddings
@@ -46,6 +48,7 @@ def run_improvement4(embedding_model, embedding_api_url, api_key, headers):
                         embeddings.append(None)
                         continue
                     try:
+                        # Use the new interface: openai.Embedding.create
                         response = openai.Embedding.create(
                             model=embedding_model,
                             input=text
@@ -60,7 +63,6 @@ def run_improvement4(embedding_model, embedding_api_url, api_key, headers):
                 st.success("✅ Embeddings generated and stored in 'Embedding' column.")
 
             st.dataframe(df.head())
-
             csv_with_embeddings = df.to_csv(index=False).encode("utf-8")
             st.download_button(
                 "⬇️ Download CSV with Embeddings",
@@ -69,6 +71,33 @@ def run_improvement4(embedding_model, embedding_api_url, api_key, headers):
                 mime="text/csv"
             )
 
+            # --- Optional: Embedding Completion Summary ---
+            st.markdown("## 1.1) Embedding Completion Summary (Optional)")
+            if st.button("🔮 Generate Embedding Summary"):
+                with st.spinner("Generating embedding summary..."):
+                    # You can modify the prompt as needed. This prompt asks GPT-4 to summarize the overall embeddings.
+                    prompt = (
+                        "Based on the embeddings generated for the provided Quranic commentary CSV, "
+                        "summarize the overall relationship or thematic clustering of the commentary. "
+                        "Provide a short explanation."
+                    )
+                    try:
+                        completion_response = openai.ChatCompletion.create(
+                            model="gpt-4",
+                            messages=[
+                                {"role": "system", "content": "You are an expert in Quranic commentary analysis."},
+                                {"role": "user", "content": prompt}
+                            ],
+                            temperature=0.3,
+                            max_tokens=150
+                        )
+                        summary = completion_response["choices"][0]["message"]["content"]
+                        st.success("✅ Embedding Summary Generated")
+                        st.markdown("### Embedding Summary:")
+                        st.write(summary)
+                    except Exception as e:
+                        st.error(f"Failed to generate embedding summary: {e}")
+
         # --- Step 2: Row-to-Row Comparison ---
         st.markdown("## 2) Compare Rows' ThemeText")
         st.info("Select 2 or more rows to compare their meanings with GPT-4.")
@@ -76,8 +105,7 @@ def run_improvement4(embedding_model, embedding_api_url, api_key, headers):
 
         if len(selected_indices) >= 2 and api_key:
             selected_texts = df.loc[selected_indices, 'ThemeText'].tolist()
-
-            prompt = f"""You are analyzing Quranic commentary themes. Compare the following texts and determine whether their meanings are:
+            prompt = """You are analyzing Quranic commentary themes. Compare the following texts and determine whether their meanings are:
 - Similar
 - Complementary
 - Contrary
@@ -97,15 +125,15 @@ Texts:
                             {"role": "system", "content": "You are a Quranic scholar and theme analyzer."},
                             {"role": "user", "content": prompt}
                         ],
-                        temperature=0.3
+                        temperature=0.3,
+                        max_tokens=250
                     )
-                    ai_result = response['choices'][0]['message']['content']
+                    ai_result = response["choices"][0]["message"]["content"]
                     st.success("✅ Analysis Complete")
                     st.markdown("### 🧾 Result from AI:")
                     st.write(ai_result)
                 except Exception as e:
                     st.error(f"OpenAI GPT-4 call failed: {e}")
-
         elif len(selected_indices) > 0 and not api_key:
             st.warning("⚠️ Please enter your API key to proceed.")
         elif len(selected_indices) < 2:
