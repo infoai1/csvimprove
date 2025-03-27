@@ -4,18 +4,20 @@ from improvement1 import run_improvement1
 from improvement2 import run_improvement2
 from improvement3 import run_improvement3
 from improvement4 import run_improvement4
+import config
+import utils
 
 st.set_page_config(page_title="Quran Tafsir Enricher", layout="wide")
 
 # Centered layout using container
 with st.container():
     st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
-    st.title("🕌 Quran Commentary Enrichment App")
+    st.title("🕌 Quran Commentary Enricher")
     st.markdown(
         "<p style='font-size: 18px;'>"
-        "This app enriches Quranic commentary in multiple steps: first by extracting core themes and reflections (Improvement 1), "
-        "then generating outlines and contextual questions (Improvement 2), followed by splitting tafsir into thematic sections (Improvement 3), "
-        "and finally adding embeddings and relationship analysis (Improvement 4)."
+        "This app enriches Quranic commentary in multiple steps: "
+        "Improvement 1 extracts core themes and reflections; Improvement 2 generates outlines and contextual questions; "
+        "Improvement 3 splits tafsir into thematic sections; and Improvement 4 adds embeddings and relationship analysis."
         "</p>",
         unsafe_allow_html=True,
     )
@@ -24,25 +26,31 @@ with st.container():
 # Centered controls layout
 st.markdown("<div style='max-width: 800px; margin: auto;'>", unsafe_allow_html=True)
 
-# Model selection
-tabs = ["DeepSeek Reasoner", "Claude 3.5 Sonnet (via OpenRouter)", "Custom"]
-model_choice = st.selectbox("🤖 Choose AI Model", tabs)
-
-# Pre-fill model + endpoint
-if model_choice == "DeepSeek Reasoner":
-    api_url = "https://api.deepseek.com/v1/chat/completions"
-    model_name = "deepseek-reasoner"
-elif model_choice == "Claude 3.5 Sonnet (via OpenRouter)":
-    api_url = "https://openrouter.ai/api/v1/chat/completions"
-    model_name = "anthropic/claude-3-sonnet"
+# -----------------------------
+# Chat Model Selection
+# -----------------------------
+model_choice = st.selectbox("🤖 Choose AI Chat Model", list(config.DEFAULT_CHAT_MODELS.keys()) + ["Custom"])
+if model_choice != "Custom":
+    chat_model = config.DEFAULT_CHAT_MODELS[model_choice]
+    api_url = chat_model["api_url"]
+    model_name = chat_model["model_name"]
 else:
     api_url = st.text_input("🔗 Custom API Endpoint")
     model_name = st.text_input("💬 Custom Model Name")
 
-# API key input
+# -----------------------------
+# Embedding Model Selection
+# -----------------------------
+embedding_choice = st.selectbox("🔎 Choose OpenAI Embedding Model", list(config.EMBEDDING_MODELS.keys()))
+embedding_model = config.EMBEDDING_MODELS[embedding_choice]
+embedding_api_url = config.EMBEDDING_API_URL
+
+# -----------------------------
+# API Key Input
+# -----------------------------
 api_key = st.text_input("🔑 API Key", type="password")
 
-# Shared headers
+# Shared headers for Chat API (and used for Embeddings as well)
 headers = {
     "Content-Type": "application/json",
     "Authorization": f"Bearer {api_key}"
@@ -53,12 +61,6 @@ headers = {
 # -----------------------------
 st.markdown("---")
 st.markdown("<h2 style='text-align: center;'>🧩 Improvement 1</h2>", unsafe_allow_html=True)
-st.markdown(
-    "<p style='text-align: center; font-size: 16px;'>"
-    "Extract core themes, wisdom points, real-life reflections, and revelation context from grouped tafsir commentary."
-    "</p>",
-    unsafe_allow_html=True,
-)
 run_improvement1(model_name, api_url, api_key, headers)
 
 # -----------------------------
@@ -66,12 +68,6 @@ run_improvement1(model_name, api_url, api_key, headers)
 # -----------------------------
 st.markdown("---")
 st.markdown("<h2 style='text-align: center;'>📘 Improvement 2</h2>", unsafe_allow_html=True)
-st.markdown(
-    "<p style='text-align: center; font-size: 16px;'>"
-    "Generate a structured outline and insightful contextual questions to deepen understanding of each tafsir block."
-    "</p>",
-    unsafe_allow_html=True,
-)
 run_improvement2(model_name, api_url, api_key, headers)
 
 # -----------------------------
@@ -79,12 +75,6 @@ run_improvement2(model_name, api_url, api_key, headers)
 # -----------------------------
 st.markdown("---")
 st.markdown("<h2 style='text-align: center;'>🧠 Improvement 3</h2>", unsafe_allow_html=True)
-st.markdown(
-    "<p style='text-align: center; font-size: 16px;'>"
-    "Split long tafsir blocks into smaller thematic sections (150–200 words), each with its own title, summary, keywords, and outline."
-    "</p>",
-    unsafe_allow_html=True,
-)
 run_improvement3(model_name, api_url, api_key, headers)
 
 # -----------------------------
@@ -92,13 +82,7 @@ run_improvement3(model_name, api_url, api_key, headers)
 # -----------------------------
 st.markdown("---")
 st.markdown("<h2 style='text-align: center;'>🔎 Improvement 4</h2>", unsafe_allow_html=True)
-st.markdown(
-    "<p style='text-align: center; font-size: 16px;'>"
-    "Add OpenAI embeddings to your CSV and analyze the relationships between selected commentary rows."
-    "</p>",
-    unsafe_allow_html=True,
-)
-run_improvement4()
+run_improvement4(embedding_model, embedding_api_url, api_key, headers)
 
-# Close centered controls container
+# Close centered container
 st.markdown("</div>", unsafe_allow_html=True)
