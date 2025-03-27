@@ -1,25 +1,28 @@
 import streamlit as st
 import pandas as pd
 import openai
-import json
 
-def run_improvement4():
+def run_improvement4(embedding_model, embedding_api_url, api_key, headers):
     """
-    Improvement 4: 
-    1) Adds embeddings to CSV using OpenAI Embeddings API
-    2) Lets user compare multiple rows (ThemeText) with GPT-4
+    Improvement 4:
+    1) Adds embeddings to CSV using the specified OpenAI Embeddings API.
+    2) Lets the user compare selected rows' ThemeText with GPT-4.
+    
+    Parameters:
+      - embedding_model: (str) e.g., "text-embedding-3-small" or "text-embedding-ada-002"
+      - embedding_api_url: (str) The API endpoint for embeddings.
+      - api_key: (str) Your OpenAI API key.
+      - headers: (dict) Shared headers (includes the API key).
     """
-
     st.header("🔎 Improvement 4: Embeddings & Relationship Analysis")
     st.markdown(
-        "This step adds an 'Embedding' column to your CSV using OpenAI Embeddings, "
-        "and optionally compares selected rows' ThemeText to see if they are similar, complementary, or contrary."
+        "This step adds an 'Embedding' column to your CSV using OpenAI Embeddings and optionally compares "
+        "selected rows' ThemeText to analyze their relationship."
     )
 
-    # --- API Key ---
-    api_key = st.text_input("🔑 Enter your OpenAI API Key", type="password")
-    if api_key:
-        openai.api_key = api_key
+    # Set OpenAI API key and base for embeddings
+    openai.api_key = api_key
+    openai.api_base = embedding_api_url
 
     # --- File Upload ---
     uploaded_file = st.file_uploader("📂 Upload your CSV file (must have 'ThemeText' column)", type=["csv"], key="improvement4")
@@ -32,7 +35,7 @@ def run_improvement4():
             st.error("❌ 'ThemeText' column not found in the CSV!")
             return
 
-        # Step 1: Embedding
+        # --- Step 1: Generate Embeddings ---
         st.markdown("## 1) Add OpenAI Embeddings to Each Row")
         if st.button("🔮 Generate Embeddings for 'ThemeText'"):
             with st.spinner("Generating embeddings..."):
@@ -44,7 +47,7 @@ def run_improvement4():
                         continue
                     try:
                         response = openai.Embedding.create(
-                            model="text-embedding-3-small",
+                            model=embedding_model,
                             input=text
                         )
                         vector = response["data"][0]["embedding"]
@@ -58,7 +61,6 @@ def run_improvement4():
 
             st.dataframe(df.head())
 
-            # Download updated CSV
             csv_with_embeddings = df.to_csv(index=False).encode("utf-8")
             st.download_button(
                 "⬇️ Download CSV with Embeddings",
@@ -67,7 +69,7 @@ def run_improvement4():
                 mime="text/csv"
             )
 
-        # Step 2: Row-to-Row Comparison
+        # --- Step 2: Row-to-Row Comparison ---
         st.markdown("## 2) Compare Rows' ThemeText")
         st.info("Select 2 or more rows to compare their meanings with GPT-4.")
         selected_indices = st.multiselect("Choose 2 or more rows", options=df.index.tolist())
@@ -75,9 +77,7 @@ def run_improvement4():
         if len(selected_indices) >= 2 and api_key:
             selected_texts = df.loc[selected_indices, 'ThemeText'].tolist()
 
-            # Build a prompt
-            prompt = """You are analyzing Quranic commentary themes. Compare the following texts 
-and determine whether their meanings are:
+            prompt = f"""You are analyzing Quranic commentary themes. Compare the following texts and determine whether their meanings are:
 - Similar
 - Complementary
 - Contrary
@@ -89,7 +89,6 @@ Texts:
             for i, text in enumerate(selected_texts, 1):
                 prompt += f"\nText {i}: {text.strip()}\n"
 
-            # OpenAI call
             with st.spinner("Analyzing with GPT-4..."):
                 try:
                     response = openai.ChatCompletion.create(
@@ -104,7 +103,6 @@ Texts:
                     st.success("✅ Analysis Complete")
                     st.markdown("### 🧾 Result from AI:")
                     st.write(ai_result)
-
                 except Exception as e:
                     st.error(f"OpenAI GPT-4 call failed: {e}")
 
