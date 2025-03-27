@@ -11,20 +11,20 @@ def run_improvement4(embedding_model, embedding_api_url, api_key, headers):
     
     Parameters:
       - embedding_model: (str) e.g., "text-embedding-3-small" or "text-embedding-ada-002"
-      - embedding_api_url: (str) The API endpoint for embeddings.
+      - embedding_api_url: (str) The API endpoint for embeddings (should be set to "https://api.openai.com/v1")
       - api_key: (str) Your OpenAI API key.
       - headers: (dict) Shared headers (includes the API key).
     """
     st.header("🔎 Improvement 4: Embeddings & Relationship Analysis")
     st.markdown(
-        "This step adds an 'Embedding' column to your CSV using OpenAI Embeddings (you can choose a small or large model) and "
-        "optionally generates an embedding summary using the completions API. It also lets you compare selected rows' ThemeText "
-        "to analyze their relationship."
+        "This step adds an 'Embedding' column to your CSV using OpenAI Embeddings (choose a small or large model) and "
+        "optionally generates a summary using the completions API. It also lets you compare selected rows' ThemeText."
     )
 
-    # Set OpenAI API key and base for embeddings
+    # Set OpenAI API key
     openai.api_key = api_key
-    openai.api_base = embedding_api_url
+    # IMPORTANT: Set the base to the default OpenAI API endpoint (do not include /embeddings here)
+    openai.api_base = "https://api.openai.com/v1"
 
     # --- File Upload ---
     uploaded_file = st.file_uploader("📂 Upload your CSV file (must have 'ThemeText' column)", type=["csv"], key="improvement4")
@@ -48,7 +48,6 @@ def run_improvement4(embedding_model, embedding_api_url, api_key, headers):
                         embeddings.append(None)
                         continue
                     try:
-                        # Use the new interface: openai.Embedding.create
                         response = openai.Embedding.create(
                             model=embedding_model,
                             input=text
@@ -75,7 +74,6 @@ def run_improvement4(embedding_model, embedding_api_url, api_key, headers):
             st.markdown("## 1.1) Embedding Completion Summary (Optional)")
             if st.button("🔮 Generate Embedding Summary"):
                 with st.spinner("Generating embedding summary..."):
-                    # You can modify the prompt as needed. This prompt asks GPT-4 to summarize the overall embeddings.
                     prompt = (
                         "Based on the embeddings generated for the provided Quranic commentary CSV, "
                         "summarize the overall relationship or thematic clustering of the commentary. "
