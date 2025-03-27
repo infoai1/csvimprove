@@ -19,4 +19,4 @@ EMBEDDING_MODELS = {
 }
 
 # Embedding API endpoint (OpenAI)
-EMBEDDING_API_URL = "https://api.openai.com/v1/embeddings"
+EMBEDDING_API_URL = "https://api.openai.com/v1"
