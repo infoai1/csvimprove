@@ -41,28 +41,25 @@ def run_improvement4(embedding_model, embedding_api_url, api_key, headers):
         st.markdown("## 1) Add OpenAI Embeddings to Each Row")
         if st.button("🔮 Generate Embeddings for 'ThemeText'"):
             with st.spinner("Generating embeddings..."):
-                embeddings = []
-                for idx, row in df.iterrows():
-                    text = str(row["ThemeText"])
-                    if not text.strip():
-                        embeddings.append(None)
-                        continue
-                    try:
-                        response = openai.Embedding.create(
-                            model=embedding_model,
-                            input=text
-                        )
-                        vector = response["data"][0]["embedding"]
-                        embeddings.append(vector)
-                    except Exception as e:
-                        st.warning(f"Row {idx} failed to embed: {e}")
-                        embeddings.append(None)
+
+                try:
+                    texts = df["ThemeText"].fillna("").tolist()
+                    response = openai.Embedding.create(
+                        model=embedding_model,
+                        input=texts
+                    )
+                    vectors = [item["embedding"] for item in response["data"]]
+                    df["Embedding"] = vectors
+                    st.success("✅ Batch embeddings generated successfully.")
+                except Exception as e:
+                    st.error(f"Embedding failed: {e}")
+
 
                 df["Embedding"] = embeddings
                 st.success("✅ Embeddings generated and stored in 'Embedding' column.")
 
             st.dataframe(df.head())
-            csv_with_embeddings = df.to_csv(index=False).encode("utf-8")
+            csv_with_embeddings = df.to_csv(index=False, line_terminator="\n").encode("utf-8")
             st.download_button(
                 "⬇️ Download CSV with Embeddings",
                 csv_with_embeddings,
@@ -136,3 +133,11 @@ Texts:
             st.warning("⚠️ Please enter your API key to proceed.")
         elif len(selected_indices) < 2:
             st.info("ℹ️ Select at least 2 rows to compare.")
+
+
+
+
+
+
+
+
