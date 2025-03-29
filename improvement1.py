@@ -4,7 +4,7 @@ import json
 import requests
 
 def run_improvement1(model_name, api_url, api_key, headers):
-    st.header("🚀 Step 1: Enrich Tafsir by Commentary Group")
+    st.header("🚀 Step 1: Enrich Tafsir by Verse Group")
     uploaded_file = st.file_uploader("📂 Upload your Tafsir CSV", type="csv", key="step1")
 
     if uploaded_file and st.button("Run Step 1 Enrichment"):
@@ -15,8 +15,8 @@ def run_improvement1(model_name, api_url, api_key, headers):
         st.dataframe(df.head())
         st.write("📊 Columns found:", df.columns.tolist())
 
-        # 🔐 Validate required columns
-        required_columns = ["Commentary Group", "English Commentary", "Text (Arabic)", "Latest (English) Translation"]
+        # 🔐 Validate required columns based on this file
+        required_columns = ["Verse Group", "English Commentary", "translation"]
         missing = [col for col in required_columns if col not in df.columns]
         if missing:
             st.error(f"❌ Missing required columns: {missing}")
@@ -28,21 +28,19 @@ def run_improvement1(model_name, api_url, api_key, headers):
             if field not in df.columns:
                 df[field] = ""
 
-        grouped = df.groupby("Commentary Group")
+        grouped = df.groupby("Verse Group")
         group_results = {}
 
         for group_name, group_df in grouped:
             st.markdown(f"### 🧠 Processing Group: `{group_name}`")
 
-            verse_text = " | ".join(group_df["Text (Arabic)"].dropna().astype(str).tolist())
-            translation = " | ".join(group_df["Latest (English) Translation"].dropna().astype(str).tolist())
+            translation = " | ".join(group_df["translation"].dropna().astype(str).tolist())
             commentary_series = group_df["English Commentary"].dropna().astype(str)
             commentary = commentary_series.iloc[0] if not commentary_series.empty else "No commentary provided."
 
             prompt = f"""
-Given the Quranic verses: \"{verse_text}\" 
-(Translation: \"{translation}\") 
-and this group commentary: \"{commentary}\", extract:
+Given this English Quranic translation: \"{translation}\"  
+And this group commentary: \"{commentary}\", extract:
 
 - themes
 - wisdom_points
@@ -84,7 +82,7 @@ Return result as **valid JSON** like this:
 
         # Apply enrichment results to DataFrame
         for idx, row in df.iterrows():
-            enriched = group_results.get(row["Commentary Group"], {})
+            enriched = group_results.get(row["Verse Group"], {})
             for field in enrich_fields:
                 df.at[idx, field] = enriched.get(field, "")
 
