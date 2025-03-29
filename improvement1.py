@@ -9,6 +9,7 @@ def run_improvement1(model_name, api_url, api_key, headers):
 
     if uploaded_file and st.button("Run Step 1 Enrichment"):
         df = pd.read_csv(uploaded_file)
+        df.columns = df.columns.str.strip()
         st.success("✅ File loaded!")
         st.dataframe(df.head())
 
