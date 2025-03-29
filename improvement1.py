@@ -12,6 +12,20 @@ def run_improvement1(model_name, api_url, api_key, headers):
         df.columns = df.columns.str.strip()
         st.success("✅ File loaded!")
         st.dataframe(df.head())
+                # Debug: Show actual column names
+        st.write("📊 Columns found:", df.columns.tolist())
+
+        # Ensure required column exists
+        if "Commentary Group" not in df.columns:
+            st.error("❌ 'Commentary Group' column is missing from the uploaded file.")
+            return
+
+        # ✅ Safe to group now
+        grouped = df.groupby("Commentary Group")
+
+        for group_name, group_df in grouped:
+            st.markdown(f"### ✨ Group: {group_name}")
+            st.dataframe(group_df.head())
 
         enrich_fields = ["themes", "wisdom_points", "real_life_reflections", "revelation_context"]
         for field in enrich_fields:
