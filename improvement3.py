@@ -4,144 +4,101 @@ import json
 import requests
 import textwrap
 
-def chunk_text_with_overlap(text, chunk_size=200, overlap_ratio=0.1):
-    """
-    Splits the input text into chunks of roughly chunk_size words,
-    overlapping each chunk by overlap_ratio (e.g., 0.1 = 10% overlap).
-    """
-    words = text.split()
-    overlap = int(chunk_size * overlap_ratio)
-    chunks = []
-    i = 0
-    while i < len(words):
-        chunk = words[i: i + chunk_size]
-        chunks.append(" ".join(chunk))
-        # Move forward by chunk_size minus the overlap words
-        i += (chunk_size - overlap)
-    return chunks
+# Improvement 3: Thematic Splitting, each new section => new row
 
 def run_improvement3(model_name, api_url, api_key, headers):
-    st.header("🧠 Improvement 3: Hybrid Chunking (Deterministic + AI Metadata)")
-    st.markdown(
-        "This method splits the commentary using a deterministic, fixed word count approach (with 10% overlap) "
-        "and then calls the AI to generate thematic metadata for each chunk, while preserving the exact text."
-    )
+    st.header("🧠 Improvement 3: Thematic Splitting into Sections (150–200 words)")
+    improvement3_file = st.file_uploader("📂 Upload CSV from Improvement 2", type="csv", key="improvement3")
 
-    improvement3_file = st.file_uploader(
-        "📂 Upload CSV from Improvement 2", 
-        type="csv", 
-        key="improvement3"
-    )
-
-    if improvement3_file and st.button("🚀 Run Hybrid Chunking"):
+    if improvement3_file and st.button("🚀 Split Commentary into Thematic Sections"):
         df = pd.read_csv(improvement3_file)
         st.success("✅ File loaded!")
         st.dataframe(df.head())
 
-        # Base columns from original CSV plus new metadata columns
-        base_cols = list(df.columns)
-        extra_cols = [
-            "SectionNumber", "ThemeText", "ThemeTitle", "ThemeSummary",
-            "ContextualQuestion", "Keywords", "Outline"
+        # We'll create a new DataFrame to store the results (one row per section)
+        columns_needed = list(df.columns) + [
+            "SectionNumber", "ThemeTitle", "ThemeText", "ContextualQuestion",
+            "ThemeSummary", "Keywords", "Outline"
         ]
-        result_cols = base_cols + extra_cols
-        result_df = pd.DataFrame(columns=result_cols)
 
-        # Process each group separately
-        if "Commentary Group" not in df.columns:
-            st.error("❌ No 'Commentary Group' column found! Please ensure your CSV has a 'Commentary Group' column.")
-            return
+        result_df = pd.DataFrame(columns=columns_needed)
 
+        # Group by 'Commentary Group' as usual
         grouped = df.groupby("Commentary Group")
+
         for group_name, group_df in grouped:
-            st.markdown(f"### 📘 Processing Group: `{group_name}`")
+            st.markdown(f"### 📘 Processing Group: `{group_name}` for thematic sections")
+
             commentary_series = group_df["English Commentary"].dropna().astype(str)
             commentary = commentary_series.iloc[0] if not commentary_series.empty else ""
 
             if not commentary:
-                st.warning(f"No commentary found for group: {group_name}")
                 continue
 
-            # Use deterministic local chunking with 10% overlap
-            chunks = chunk_text_with_overlap(commentary, chunk_size=200, overlap_ratio=0.1)
-            st.write(f"Found {len(chunks)} chunk(s) for group {group_name} with 10% overlap.")
+            prompt = f"""
+Split the following commentary into thematic sections (150–200 words each). For each section, extract:
+- SectionNumber (1, 2, 3,...)
+- ThemeTitle (short, descriptive)
+- ThemeText (150–200 words)
+- ContextualQuestion (a deep, open-ended question)
+- ThemeSummary (2–3 sentence overview)
+- Keywords (5–7 key terms)
+- Outline (3–5 bullet points)
 
-            for idx_chunk, chunk_text in enumerate(chunks, start=1):
-                # Build the prompt for metadata generation
-                prompt = f"""
-You are given the following exact excerpt from a Quranic commentary (no paraphrasing allowed).
-Please analyze the excerpt and provide the following metadata:
-- ThemeTitle (1-5 words)
-- ThemeSummary (2-3 sentences)
-- craft three deep and open-ended contextual questions that - Are rooted in the actual content and message of the text.
-- Keywords (5-7 keywords as a list)
-- Outline (3-5 bullet points)
+Return as JSON list, each item = one section.
 
-Return your result as JSON with keys: 
-ThemeTitle, ThemeSummary, ContextualQuestion, Keywords, Outline.
-
-Excerpt:
-\"\"\"
-{chunk_text}
-\"\"\"
+Commentary:
+{commentary}
 """
-                payload = {
-                    "model": model_name,
-                    "messages": [{"role": "user", "content": prompt}],
-                    "temperature": 0.3,
-                    "max_tokens": 800
-                }
-                try:
-                    with st.spinner(f"Labeling chunk #{idx_chunk} in group {group_name}..."):
-                        response = requests.post(api_url, headers=headers, json=payload, timeout=90)
-                        reply = response.json()
-                        raw_content = reply["choices"][0]["message"]["content"]
-                        st.code(raw_content, language="json")
 
-                        # Clean and parse the JSON response
-                        cleaned = raw_content.strip().replace("```json", "").replace("```", "").strip()
-                        try:
-                            meta = json.loads(cleaned)
-                        except json.JSONDecodeError as decode_err:
-                            st.warning(f"❌ JSON parse error for chunk #{idx_chunk} in group {group_name}: {decode_err}")
-                            meta = {}
+            payload = {
+                "model": model_name,
+                "messages": [
+                    {"role": "user", "content": prompt}
+                ],
+                "temperature": 0.4,
+                "max_tokens": 1200
+            }
 
-                        # Build new row data (copy base group info from first row)
+            try:
+                with st.spinner(f"Splitting group {group_name}..."):
+                    response = requests.post(api_url, headers=headers, json=payload, timeout=90)
+                    reply = response.json()
+                    raw_content = reply["choices"][0]["message"]["content"]
+                    st.code(raw_content, language="json")
+
+                    cleaned = raw_content.strip().replace("```json", "").replace("```", "").strip()
+                    data = json.loads(cleaned)
+
+                    for section in data:
                         new_row = {}
-                        for col in base_cols:
+                        for col in df.columns:
                             new_row[col] = group_df.iloc[0][col]
 
-                        new_row["SectionNumber"] = f"{group_name} - Chunk {idx_chunk}"
-                        new_row["ThemeText"] = chunk_text  # exact excerpt from commentary
-                        new_row["ThemeTitle"] = meta.get("ThemeTitle", "")
-                        new_row["ThemeSummary"] = meta.get("ThemeSummary", "")
-                        new_row["ContextualQuestion"] = meta.get("ContextualQuestion", "")
-                        
-                        # Convert Keywords and Outline if they're lists
-                        keywords_list = meta.get("Keywords", [])
-                        if isinstance(keywords_list, list):
-                            new_row["Keywords"] = ", ".join(keywords_list)
-                        else:
-                            new_row["Keywords"] = str(keywords_list)
-                        
-                        outline_list = meta.get("Outline", [])
-                        if isinstance(outline_list, list):
-                            new_row["Outline"] = "; ".join(outline_list)
-                        else:
-                            new_row["Outline"] = str(outline_list)
+                        section_num = section.get("SectionNumber", "")
+                        new_row["SectionNumber"] = f"{group_name} - Section {section_num}"
+                        new_row["ThemeTitle"] = section.get("ThemeTitle", "")
+                        new_row["ThemeText"] = section.get("ThemeText", "")
+                        new_row["ContextualQuestion"] = section.get("ContextualQuestion", "")
+                        new_row["ThemeSummary"] = section.get("ThemeSummary", "")
+                        new_row["Keywords"] = ", ".join(section.get("Keywords", []))
+                        new_row["Outline"] = "; ".join(section.get("Outline", []))
 
                         result_df = pd.concat([result_df, pd.DataFrame([new_row])], ignore_index=True)
-                except Exception as e:
-                    st.warning(f"❌ Failed for chunk #{idx_chunk} in group {group_name}: {e}")
 
-        st.success("🎉 All commentary chunks processed with 10% overlap!")
-        st.write("Preview of final output:")
-        st.dataframe(result_df.head())
+            except Exception as e:
+                st.warning(f"❌ Failed for group {group_name}: {e}")
 
-        csv_data = result_df.to_csv(index=False).encode("utf-8")
-        st.download_button(
-            "⬇️ Download CSV with Hybrid Chunks",
-            csv_data,
-            file_name="enriched_step3_hybrid.csv",
-            mime="text/csv"
-        )
+        st.success("🎉 Commentary successfully split into new rows!")
+        st.write("Preview:")
+
+        # Fix for Arrow error: convert lists/dicts to strings before showing
+        preview_df = result_df.copy()
+        for col in preview_df.columns:
+            if preview_df[col].apply(lambda x: isinstance(x, (list, dict))).any():
+                preview_df[col] = preview_df[col].apply(lambda x: json.dumps(x) if pd.notnull(x) else "")
+
+        st.dataframe(preview_df.head())
+
+        csv = result_df.to_csv(index=False).encode("utf-8")
+        st.download_button("⬇️ Download CSV with Thematic Sections (New Rows)", csv, file_name="enriched_step3_newrows.csv", mime="text/csv")
