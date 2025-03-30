@@ -1,19 +1,21 @@
 import streamlit as st
 import pandas as pd
 import openai
+import json
 
 def run_improvement4(embedding_model, embedding_api_url, api_key, headers):
     st.header("🔎 Embedding Quran Commentary Themes")
     st.markdown(
-        "This app will add semantic embeddings to your CSV using OpenAI Embeddings API. "
-        "It supports models like `text-embedding-3-small`. You can also generate an optional summary."
+        "This step adds semantic embeddings to your CSV using OpenAI Embeddings API. "
+        "It supports models like `text-embedding-3-small` or `text-embedding-ada-002`. "
+        "You can also generate an optional summary."
     )
 
-    # Set OpenAI API key
+    # Set OpenAI API key and base (for embeddings, set base to default)
     openai.api_key = api_key
     openai.api_base = "https://api.openai.com/v1"
 
-    # Upload CSV
+    # --- File Upload ---
     uploaded_file = st.file_uploader("📂 Upload CSV (must include 'ThemeText')", type=["csv"], key="embed_step")
     if uploaded_file:
         df = pd.read_csv(uploaded_file)
@@ -24,7 +26,7 @@ def run_improvement4(embedding_model, embedding_api_url, api_key, headers):
             st.error("❌ 'ThemeText' column not found in the CSV!")
             return
 
-        # Step 1: Generate Embeddings
+        # --- Step 1: Generate Embeddings for ThemeText ---
         st.markdown("## 1) Generate Embeddings for 'ThemeText'")
         if st.button("🔮 Start Embedding"):
             with st.spinner("Embedding in progress..."):
@@ -34,6 +36,7 @@ def run_improvement4(embedding_model, embedding_api_url, api_key, headers):
                         model=embedding_model,
                         input=texts
                     )
+                    # Extract embeddings (each is a list of numbers)
                     vectors = [item["embedding"] for item in response["data"]]
                     df["Embedding"] = vectors
                     st.success("✅ Embeddings added to 'Embedding' column")
@@ -42,7 +45,9 @@ def run_improvement4(embedding_model, embedding_api_url, api_key, headers):
                     st.error(f"Embedding failed: {e}")
                     return
 
-            # Download enriched CSV
+            # Convert embeddings to JSON strings for CSV export
+            df["Embedding"] = df["Embedding"].apply(lambda x: json.dumps(x) if pd.notnull(x) else "")
+
             csv_with_embeddings = df.to_csv(index=False, line_terminator="\n").encode("utf-8")
             st.download_button(
                 "⬇️ Download CSV with Embeddings",
@@ -51,10 +56,10 @@ def run_improvement4(embedding_model, embedding_api_url, api_key, headers):
                 mime="text/csv"
             )
 
-        # Step 2: Optional - Embedding Summary via GPT
+        # --- Step 2: Optional - Generate Embedding Summary via GPT-4 ---
         st.markdown("## 2) Optional: Get Summary of Embeddings")
         if st.button("🧠 Generate Theme Summary (GPT-4)"):
-            with st.spinner("Calling GPT..."):
+            with st.spinner("Calling GPT-4..."):
                 try:
                     prompt = (
                         "Based on the embeddings generated for the provided Quranic commentary themes, "
