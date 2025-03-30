@@ -5,6 +5,7 @@ import requests
 
 def run_combined_enrichment(model_name, api_url, api_key, headers):
     st.header("📚 Combined Enrichment Tool")
+
     uploaded_file = st.file_uploader("📂 Upload Tafsir CSV", type="csv", key="combined")
 
     # 🔘 Choose mode
@@ -17,16 +18,22 @@ def run_combined_enrichment(model_name, api_url, api_key, headers):
     if uploaded_file and st.button("🚀 Run Enrichment"):
         df = pd.read_csv(uploaded_file)
         df.columns = df.columns.str.strip()
+
+        # 💡 Column mapping fallback
+        col_map = {
+            "Verse Group": "Verse Group" if "Verse Group" in df.columns else "Commentary Group",
+            "translation": "translation" if "translation" in df.columns else "Latest (English) Translation",
+            "English Commentary": "English Commentary" if "English Commentary" in df.columns else "commentary"
+        }
+
+        missing = [k for k, v in col_map.items() if v not in df.columns]
+        if missing:
+            st.error(f"❌ Missing columns: {missing}")
+            return
+
         st.success("✅ File loaded!")
         st.dataframe(df.head())
 
-        # Check required columns
-        required_cols = ["Verse Group", "translation", "English Commentary"]
-        if any(col not in df.columns for col in required_cols):
-            st.error(f"❌ Missing one of the required columns: {required_cols}")
-            return
-
-        # Fields by section
         enrich_fields_part1 = ["themes", "wisdom_points", "real_life_reflections", "revelation_context"]
         enrich_fields_part2 = ["outline_of_commentary", "contextual_questions"]
         enrich_fields = []
@@ -40,17 +47,17 @@ def run_combined_enrichment(model_name, api_url, api_key, headers):
             if field not in df.columns:
                 df[field] = ""
 
-        grouped = df.groupby("Verse Group")
+        grouped = df.groupby(col_map["Verse Group"])
         results = {}
 
         for group_name, group_df in grouped:
             st.markdown(f"### 🧠 Processing Group: `{group_name}`")
 
-            translation = " | ".join(group_df["translation"].dropna().astype(str).tolist())
-            commentary_series = group_df["English Commentary"].dropna().astype(str)
+            translation = " | ".join(group_df[col_map["translation"]].dropna().astype(str).tolist())
+            commentary_series = group_df[col_map["English Commentary"]].dropna().astype(str)
             commentary = commentary_series.iloc[0] if not commentary_series.empty else "No commentary provided."
 
-            # Prompt template
+            # Prompt creation
             prompt_parts = []
             if "Only Themes" in mode or "Both" in mode:
                 prompt_parts.append("1. themes\n2. wisdom_points\n3. real_life_reflections\n4. revelation_context")
@@ -87,7 +94,7 @@ Return result as valid JSON including only the fields requested.
 
         # Apply results
         for idx, row in df.iterrows():
-            enriched = results.get(row["Verse Group"], {})
+            enriched = results.get(row[col_map["Verse Group"]], {})
             for field in enrich_fields:
                 df.at[idx, field] = enriched.get(field, "")
 
