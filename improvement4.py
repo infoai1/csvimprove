@@ -50,7 +50,7 @@ def run_improvement4(embedding_model, embedding_api_url, api_key, headers):
                               else json.dumps(x) if isinstance(x, (list, tuple))
                               else ""
                 )
-                csv_with_embeddings = df.to_csv(index=False, line_terminator="\n").encode("utf-8")
+                csv_with_embeddings = df.to_csv(index=False).encode("utf-8")
                 st.download_button(
                     "⬇️ Download CSV with Embeddings",
                     csv_with_embeddings,
